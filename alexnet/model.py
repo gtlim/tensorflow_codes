@@ -27,11 +27,11 @@ import tensorflow as tf
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 128,
+tf.app.flags.DEFINE_integer('batch_size', 256,
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('filename', '',
                            """Path to the image data textfile directory.""")
-tf.app.flags.DEFINE_integer('num_classes','',
+tf.app.flags.DEFINE_integer('num_classes',0 ,
                             """Number of classes.""")
 
 # (self.feed('data')
@@ -66,7 +66,7 @@ def inference(images, is_training=True):
     #
     # conv1
     # conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
-    conv1 = layers.conv('conv1', images, 96, 11, 4, padding='VALID', group=1, stddev=0.01, wd=0.001, bias=0)
+    conv1 = layers.conv_2d('conv1', images, 96, 11, 4, padding='VALID', group=1, stddev=0.01, wd=0.00001, bias=0)
 
     # lrn1
     # lrn(2, 2e-05, 0.75, name='norm1')
@@ -81,7 +81,7 @@ def inference(images, is_training=True):
     maxpool1 = layers.max_pooling(lrn1, 3, 2, padding='VALID')
 
     # conv2
-    conv2 = layers.conv('conv2', maxpool1, 256, 5, 1, padding='SAME', group=2, stddev=0.01, wd=0.001, bias=0.1)
+    conv2 = layers.conv_2d('conv2', maxpool1, 256, 5, 1, padding='SAME', group=2, stddev=0.01, wd=0.00001, bias=0.1)
 
     # lrn2
     # lrn(2, 2e-05, 0.75, name='norm2')
@@ -96,13 +96,13 @@ def inference(images, is_training=True):
     maxpool2 = layers.max_pooling(lrn2, 3, 2, padding='VALID')
 
     # conv3
-    conv3 = layers.conv('conv3', maxpool2, 384, 3, 1, padding='SAME', group=1, stddev=0.01, wd=0.001, bias=0.1)
+    conv3 = layers.conv_2d('conv3', maxpool2, 384, 3, 1, padding='SAME', group=1, stddev=0.01, wd=0.00001, bias=0.1)
 
     # conv4
-    conv4 = layers.conv('conv4', conv3, 384, 3, 1, padding='SAME', group=2, stddev=0.01, wd=0.001, bias=0.1)
+    conv4 = layers.conv_2d('conv4', conv3, 384, 3, 1, padding='SAME', group=2, stddev=0.01, wd=0.00001, bias=0.1)
 
     # conv5
-    conv5 = layers.conv('conv5', conv4, 384, 3, 1, padding='SAME', group=2, stddev=0.01, wd=0.001, bias=0.1)
+    conv5 = layers.conv_2d('conv5', conv4, 384, 3, 1, padding='SAME', group=2, stddev=0.01, wd=0.00001, bias=0.1)
 
     # maxpool5
     # max_pool(3, 3, 2, 2, padding='VALID', name='pool5')
@@ -110,18 +110,18 @@ def inference(images, is_training=True):
 
     # Fc6
     # fc(4096, name='fc6')
-    fc6 = layers.fc('fc6', maxpool5, 4096, stddev=0.005, wd=0.001, bias=0.1)
+    fc6 = layers.fc('fc6', maxpool5, 4096, stddev=0.005, wd=0.00001, bias=0.1)
     fc6 = layers.dropout(fc6, 0.5, is_training)
 
     # Fc7
     # fc(4096, name='fc7')
-    fc7 = layers.fc('fc7', fc6, 4096, stddev=0.001, wd=0.001, bias=0.1)
+    fc7 = layers.fc('fc7', fc6, 4096, stddev=0.001, wd=0.00001, bias=0.1)
     fc7 = layers.dropout(fc7, 0.5, is_training)
 
     # softmax, i.e. softmax(WX + b) fc8
     # fc(1000, relu=False, name='fc8')
-    softmax_linear = layers.dropout('fc8', fc7, FLAGS.num_classes,
-                                    stddev=0.01, wd=0.001, bias=0.1, active=False)
+    softmax_linear = layers.fc('fc8', fc7, FLAGS.num_classes,
+                                    stddev=0.01, wd=0.00001, bias=0.1, active=False)
     return softmax_linear
 
 
