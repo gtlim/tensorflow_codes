@@ -48,7 +48,7 @@ class QueueImageData(object):
          Returns:
           distorted_image: preprocessed image
         """
-        image = tf.image.resize_images(image, image_size, image_size)
+        image = tf.image.resize_images(image, [image_size, image_size])
         reshaped_image = tf.cast(image, tf.float32)
         height = image_size
         width = image_size
