@@ -10,7 +10,7 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from . import model
+from alexnet import model
 from layers import data_helper
 
 FLAGS = tf.app.flags.FLAGS
