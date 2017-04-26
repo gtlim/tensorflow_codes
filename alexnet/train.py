@@ -24,7 +24,7 @@ tf.app.flags.DEFINE_integer('max_steps', 1000000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
-tf.app.flags.DEFINE_integer('ImageSize', 256,
+tf.app.flags.DEFINE_integer('ImageSize', 227,
                             """size of image [ size , size ].""")
 # depth of image.
 DEPTH = 3
@@ -52,28 +52,33 @@ def train():
             loss = model.loss(logits, labels)
 
             # Create a saver.
-            saver = tf.train.Saver(tf.all_variables())
+            #saver = tf.train.Saver(tf.all_variables())
             # Build a Graph that trains the model with one batch of examples and
             # updates the model parameters.
             train_op = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(loss)
             # import pudb; pudb.set_trace()
             # Start running operations on the Graph.
-            sess = tf.Session(config=tf.ConfigProto(
-                allow_soft_placement=True,
-                log_device_placement=FLAGS.log_device_placement))
+            config = tf.ConfigProto(allow_soft_placement = True,
+                                    log_device_placement=FLAGS.log_device_placement)
+            config.gpu_options.allow_growth = True
+            sess = tf.Session(config=config)
             # Build an initialization operation to run below.
-            init = tf.initialize_all_variables()
-            sess.run(init)
-
+            #init = tf.initialize_all_variables()
+            #init = tf.global_variables_initializer()
+            init_op = tf.group(tf.initialize_all_variables(),
+                   tf.initialize_local_variables())
+            sess.run(init_op) 
+            #sess.run(init)
+ 
             # Start the queue runners.
             tf.train.start_queue_runners(sess=sess)
 
-        for step in xrange(FLAGS.max_steps):
+            for step in xrange(FLAGS.max_steps):
                 start_time = time.time()
                 input_img, input_label = sess.run([img, label])
-                _, loss_value = sess.run([train_op, loss], feed_dict={images: input_img, labels: input_label})
+                _, loss_value, lg = sess.run([train_op, loss, logits], feed_dict={images: input_img, labels: input_label})
                 duration = time.time() - start_time
-
+                #print(np.argmax(lg,1), input_label)
                 assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
                 if step % 10 == 0:
@@ -86,9 +91,9 @@ def train():
                                         examples_per_sec, sec_per_batch))
 
                 # Save the model checkpoint periodically.
-                if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
-                    checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
-                    saver.save(sess, checkpoint_path, global_step=step)
+                #if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+                #    checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
+                #    saver.save(sess, checkpoint_path, global_step=step)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
