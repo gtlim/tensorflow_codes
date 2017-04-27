@@ -97,7 +97,7 @@ def train():
                                         examples_per_sec, sec_per_batch))
 		    #pdb.set_trace()
                 # Save the model checkpoint periodically.
-                if step % 100 == 0 or (step + 1) == FLAGS.max_steps:
+                #if step % 100 == 0 or (step + 1) == FLAGS.max_steps:
                      #top_k = sess.run([batch_eval], feed_dict={images: input_img, labels: input_label})
                      #print(top_k)
                      #print(np.argmax(lg,1), input_label)
