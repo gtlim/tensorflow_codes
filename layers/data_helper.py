@@ -71,9 +71,9 @@ class QueueImageData(object):
 
         # Subtract off the mean and divide by the variance of the pixels
         distorted_image = tf.image.per_image_whitening(distorted_image)
-
+        #return image
         return distorted_image
-
+    
     def distorted_inputs(self, filename, batch_size, image_size):
         """
         Construct distorted input for CIFAR training using the Reader ops.

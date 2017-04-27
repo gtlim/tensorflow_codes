@@ -50,12 +50,13 @@ def train():
 
             # Calculate loss.
             loss = model.loss(logits, labels)
-
+            batch_eval = model.eval(logits,labels)
             # Create a saver.
             #saver = tf.train.Saver(tf.all_variables())
             # Build a Graph that trains the model with one batch of examples and
             # updates the model parameters.
-            train_op = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(loss)
+            #train_op = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(loss)
+            train_op = tf.train.GradientDescentOptimizer(learning_rate=0.1).minimize(loss)
             # import pudb; pudb.set_trace()
             # Start running operations on the Graph.
             config = tf.ConfigProto(allow_soft_placement = True,
@@ -64,7 +65,6 @@ def train():
             sess = tf.Session(config=config)
             # Build an initialization operation to run below.
             #init = tf.initialize_all_variables()
-            #init = tf.global_variables_initializer()
             init_op = tf.group(tf.initialize_all_variables(),
                    tf.initialize_local_variables())
             sess.run(init_op) 
@@ -76,12 +76,18 @@ def train():
             for step in xrange(FLAGS.max_steps):
                 start_time = time.time()
                 input_img, input_label = sess.run([img, label])
+                #import matplotlib as mp
+                #import matplotlib.pyplot as plt
+                #print(input_img[0,:,:,:])
+                #plt.imshow(input_img[0,:,:,:].astype(np.uint8))
+                #plt.show()
+
+                #pdb.set_trace()
                 _, loss_value, lg = sess.run([train_op, loss, logits], feed_dict={images: input_img, labels: input_label})
                 duration = time.time() - start_time
-                #print(np.argmax(lg,1), input_label)
                 assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
-                if step % 10 == 0:
+                if step % 100 == 0:
                     num_examples_per_step = FLAGS.batch_size
                     examples_per_sec = num_examples_per_step / duration
                     sec_per_batch = float(duration)
@@ -89,9 +95,12 @@ def train():
                                   'sec/batch)')
                     print(format_str % (datetime.now(), step, loss_value,
                                         examples_per_sec, sec_per_batch))
-
+		    #pdb.set_trace()
                 # Save the model checkpoint periodically.
-                #if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+                if step % 100 == 0 or (step + 1) == FLAGS.max_steps:
+                     #top_k = sess.run([batch_eval], feed_dict={images: input_img, labels: input_label})
+                     #print(top_k)
+                     #print(np.argmax(lg,1), input_label)
                 #    checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
                 #    saver.save(sess, checkpoint_path, global_step=step)
 
