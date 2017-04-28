@@ -1,9 +1,18 @@
 import tensorflow as tf
+from sklearn.utils import shuffle
+import numpy as np 
+from scipy import misc
 
-
-class QueueImageData(object):
-    Depth = 3
-
+class QueueData(object):
+    depth = 3
+    crop_size = 227
+    """
+    Usages:
+       prep = QueueData()
+       result = prep.distorted_inputs(%filename, %batch_size, %image_size)
+       img = result.images
+       label = result.labels
+    """
     def read_labeled_image_list(self, filename):
         """
         Reads a .txt file containing pathes and labeles
@@ -34,9 +43,8 @@ class QueueImageData(object):
 
         label = input_queue[1]
         file_contents = tf.read_file(input_queue[0])
-
         # A Tensor of type uint8 3-D with shape [ height, width , channels ]
-        example = tf.image.decode_jpeg(file_contents, channels=self.Depth)
+        example = tf.image.decode_jpeg(file_contents, channels=self.depth)
         return example, label
 
     def preprocess_image(self, image, image_size):
@@ -57,7 +65,7 @@ class QueueImageData(object):
         # distortions applied to the image
 
         # Randomly crop a [height, width] section of the image
-        distorted_image = tf.random_crop(reshaped_image, [height, width, self.Depth])
+        distorted_image = tf.random_crop(reshaped_image, [self.crop_size, self.crop_size, self.depth])
 
         # Randomly flip the image horizontally
         # if you are running a text recognition you have to ignore flipling.
@@ -85,7 +93,7 @@ class QueueImageData(object):
          images: Images. 4D tensor of [batch_size, image_size, image_size, 3] size.
          labels: Labels. 1D tensor of [batch_size] size.
        """
-        num_preprocess_threads = 16
+        num_preprocess_threads = 4
 
         class Record(object):
             pass
@@ -100,7 +108,7 @@ class QueueImageData(object):
         labels = tf.convert_to_tensor(label_list, dtype=tf.int32)
         # Makes an input queue
         input_queue = tf.train.slice_input_producer([images, labels],
-                                                    num_epochs=NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN,
+                                                    #num_epochs=NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN,
                                                     shuffle=True)
 
         image, label = self.read_images_from_disk(input_queue)
@@ -149,10 +157,10 @@ class QueueImageData(object):
                                                     shuffle=True)
 
         image, label = self.read_images_from_disk(input_queue)
-        image = tf.image.resize_images(image, image_size, image_size)
+        image = tf.image.resize_images(image, [image_size, image_size])
         reshaped_image = tf.cast(image, tf.float32)
-        height = image_size
-        width = image_size
+        height = self.crop_size
+        width = self.crop_size
 
         # Image processing for evaluation.
         # Crop the central [height, width] of the image.
@@ -171,3 +179,4 @@ class QueueImageData(object):
         result.labels = label_batch
         result.num_examples = num_examples
         return result
+

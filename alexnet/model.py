@@ -49,8 +49,7 @@ tf.app.flags.DEFINE_integer('num_classes',0 ,
 #         .fc(1000, relu=False, name='fc8')
 #         .softmax(name='prob'))
 
-weight_decay=0.005
-
+weight_decay=0.005 # default weight decay
 def inference(images, is_training=True):
     """Build the Character Recognition model.
 
@@ -60,21 +59,13 @@ def inference(images, is_training=True):
     Returns:
       Logits.
     """
-    # We instantiate all variables using tf.get_variable() instead of
-    # tf.Variable() in order to share variables across multiple GPU training runs.
-    # If we only ran this model on a single GPU, we could simplify this function
-    # by replacing all instances of tf.get_variable() with tf.Variable().
-    #
     # conv1
     # conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
     conv1 = layers.conv_2d('conv1', images, 96, 11, 4, padding='VALID', group=1, stddev=0.01, wd=weight_decay, bias=0)
 
     # lrn1
     # lrn(2, 2e-05, 0.75, name='norm1')
-    radius = 2;
-    alpha = 2e-05;
-    beta = 0.75;
-    bias = 1.0
+    radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
     lrn1 = layers.lrn(conv1, radius, alpha, beta, bias)
 
     # maxpool1
@@ -86,10 +77,7 @@ def inference(images, is_training=True):
 
     # lrn2
     # lrn(2, 2e-05, 0.75, name='norm2')
-    radius = 2;
-    alpha = 2e-05;
-    beta = 0.75;
-    bias = 1.0
+    radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
     lrn2 = layers.lrn(conv2, radius, alpha, beta, bias)
 
     # maxpool2
@@ -120,7 +108,7 @@ def inference(images, is_training=True):
     fc7 = layers.dropout(fc7, 0.5, is_training)
 
     # softmax, i.e. softmax(WX + b) fc8
-    # fc(1000, relu=False, name='fc8')
+    # fc(NUMCLASSES, relu=False, name='fc8')
     softmax_linear = layers.fc('fc8', fc7, FLAGS.num_classes,
                                     stddev=0.01, wd=weight_decay, bias=0.1, active=False)
     return softmax_linear
@@ -140,5 +128,6 @@ def loss(logits, labels):
 
 def eval(logits, labels):
     top_k_op = tf.nn.in_top_k(logits, labels, 1)
-    return top_k_op 
+    res = tf.reduce_sum(tf.cast(top_k_op, tf.float32))
+    return res
         

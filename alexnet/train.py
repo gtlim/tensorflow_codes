@@ -11,7 +11,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 from alexnet import model
-from layers import data_helper
+from data_helper import image_preprocessor
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -24,7 +24,7 @@ tf.app.flags.DEFINE_integer('max_steps', 1000000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
-tf.app.flags.DEFINE_integer('ImageSize', 227,
+tf.app.flags.DEFINE_integer('image_size', 256,
                             """size of image [ size , size ].""")
 # depth of image.
 DEPTH = 3
@@ -34,29 +34,33 @@ def train():
     GPU = '/gpu:' + str(FLAGS.gpu)
     with tf.Graph().as_default():
         with tf.device(GPU):
-            images = tf.placeholder("float", [FLAGS.batch_size,
-                                              FLAGS.ImageSize, FLAGS.ImageSize, DEPTH])
-            labels = tf.placeholder("int64", [FLAGS.batch_size])
+            prep = image_preprocessor.QueueData()
+            train_result = prep.distorted_inputs(FLAGS.filename, FLAGS.batch_size, FLAGS.image_size)
+            validation_result = prep.inputs(FLAGS.filename, FLAGS.batch_size, FLAGS.image_size)
+            val_epoch = validation_result.num_examples
 
-            prep = data_helper.QueueImageData()
-            result = prep.distorted_inputs(FLAGS.filename, FLAGS.batch_size, FLAGS.ImageSize)
-            # result = recog.inputs()
-            img = result.images
-            label = result.labels
+            img = train_result.images
+            label = train_result.labels
+            img_val = validation_result.images
+            label_val = validation_result.labels
+
+            images = tf.placeholder("float", [FLAGS.batch_size,
+                                              prep.crop_size, prep.crop_size, DEPTH])
+            labels = tf.placeholder("int32", [FLAGS.batch_size])
 
             # Build a Graph that computes the logits predictions from the
             # inference model.
             logits = model.inference(images)
-
             # Calculate loss.
             loss = model.loss(logits, labels)
             batch_eval = model.eval(logits,labels)
+           
             # Create a saver.
-            #saver = tf.train.Saver(tf.all_variables())
+            saver = tf.train.Saver(tf.all_variables())
             # Build a Graph that trains the model with one batch of examples and
             # updates the model parameters.
-            #train_op = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(loss)
-            train_op = tf.train.GradientDescentOptimizer(learning_rate=0.1).minimize(loss)
+            train_op = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(loss)
+            #train_op = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(loss)
             # import pudb; pudb.set_trace()
             # Start running operations on the Graph.
             config = tf.ConfigProto(allow_soft_placement = True,
@@ -64,26 +68,22 @@ def train():
             config.gpu_options.allow_growth = True
             sess = tf.Session(config=config)
             # Build an initialization operation to run below.
-            #init = tf.initialize_all_variables()
             init_op = tf.group(tf.initialize_all_variables(),
-                   tf.initialize_local_variables())
+                   tf.initialize_local_variables()) # when perform sliding producer, error occured.
             sess.run(init_op) 
-            #sess.run(init)
  
             # Start the queue runners.
             tf.train.start_queue_runners(sess=sess)
 
             for step in xrange(FLAGS.max_steps):
+                
                 start_time = time.time()
-                input_img, input_label = sess.run([img, label])
-                #import matplotlib as mp
-                #import matplotlib.pyplot as plt
-                #print(input_img[0,:,:,:])
-                #plt.imshow(input_img[0,:,:,:].astype(np.uint8))
-                #plt.show()
-
-                #pdb.set_trace()
-                _, loss_value, lg = sess.run([train_op, loss, logits], feed_dict={images: input_img, labels: input_label})
+                try:
+                    input_img, input_label = sess.run([img, label])
+                    _, loss_value = sess.run([train_op, loss], feed_dict={images: input_img, labels: input_label})
+                except Exception as e:
+                   #print(e)
+                   pass
                 duration = time.time() - start_time
                 assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
@@ -95,14 +95,25 @@ def train():
                                   'sec/batch)')
                     print(format_str % (datetime.now(), step, loss_value,
                                         examples_per_sec, sec_per_batch))
-		    #pdb.set_trace()
                 # Save the model checkpoint periodically.
-                #if step % 100 == 0 or (step + 1) == FLAGS.max_steps:
-                     #top_k = sess.run([batch_eval], feed_dict={images: input_img, labels: input_label})
-                     #print(top_k)
-                     #print(np.argmax(lg,1), input_label)
-                #    checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
-                #    saver.save(sess, checkpoint_path, global_step=step)
+                # Check model performance periodically using validation set.
+                if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+                    format_str = ('%s: validation..')
+                    print(format_str % (datetime.now()))
+                    acc = 0.0
+                    for step in xrange(int(val_epoch/FLAGS.batch_size)):
+                        try:
+                            val_img, val_label = sess.run([img_val, label_val])
+                            res = sess.run(batch_eval, feed_dict={images: val_img, labels: val_label})
+                            acc += res
+                        except Exception as e:
+                            #print(e)
+                            continue
+                    format_str = ('%s: validation ends.. acc = %.2f')
+                    print(format_str % (datetime.now(), acc/val_epoch))
+                        
+                    #checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
+                    #saver.save(sess, checkpoint_path, global_step=step)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
