@@ -10,7 +10,7 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from alexnet import model
+from vgg import model
 from data_helper import image_preprocessor
 
 FLAGS = tf.app.flags.FLAGS
@@ -34,7 +34,7 @@ def train():
     GPU = '/gpu:' + str(FLAGS.gpu)
     with tf.Graph().as_default():
         with tf.device(GPU):
-            prep = image_preprocessor.QueueData()
+            prep = image_preprocessor.QueueData(crop_size=224)
             train_result = prep.distorted_inputs(FLAGS.filename, FLAGS.batch_size, FLAGS.image_size)
             validation_result = prep.inputs(FLAGS.filename, FLAGS.batch_size, FLAGS.image_size)
             val_epoch = validation_result.num_examples
@@ -77,7 +77,7 @@ def train():
             init_op = tf.group(tf.initialize_all_variables(),
                    tf.initialize_local_variables()) # when perform sliding producer, error occured.
             sess.run(init_op) 
-            model.load_initial_weights(sess,'alexnet/bvlc_alexnet.npy') 
+            #model.load_initial_weights(sess,'alexnet/bvlc_alexnet.npy') 
             # Start the queue runners.
             tf.train.start_queue_runners(sess=sess)
 
@@ -97,6 +97,7 @@ def train():
                                   'sec/batch)')
                     print(format_str % (datetime.now(), step, loss_value,
                                         lr_value, examples_per_sec, sec_per_batch))
+                    #print(val)
                 # Save the model checkpoint periodically.
                 # Check model performance periodically using validation set.
                 if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:
@@ -106,13 +107,13 @@ def train():
                     for step in xrange(int(val_epoch/FLAGS.batch_size)):
                         #val_img, val_label = sess.run([img_val, label_val])
                         val_img, val_label = sess.run([img, label])
-                        res = sess.run(batch_eval, feed_dict={images: val_img, labels: val_label, keep_prob: 1.0})
+                        res, val = sess.run([batch_eval,logits], feed_dict={images: val_img, labels: val_label, keep_prob: 1.0})
                         acc += res
-                    format_str = ('%s: validation ends.. acc = %.4f')
+                    format_str = ('%s: validation ends.. acc = %.2f')
                     print(format_str % (datetime.now(), acc/val_epoch))
                         
-                    checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
-                    saver.save(sess, checkpoint_path, global_step=step)
+                    #checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
+                    #saver.save(sess, checkpoint_path, global_step=step)
 
 
 def main(argv=None):  # pylint: disable=unused-argument

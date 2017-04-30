@@ -91,58 +91,44 @@ def inference(images, keep_prob):
     Returns:
       Logits.
     """
-     # conv1
-    # conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
-    conv1 = layers.conv_2d('conv1', images, 96, 11, 4, padding='VALID', group=1, stddev=0.01, wd=weight_decay, bias=0)
-
-    # lrn1
-    # lrn(2, 2e-05, 0.75, name='norm1')
-    radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
-    lrn1 = layers.lrn(conv1, radius, alpha, beta, bias)
-
+    # conv1
+    conv1 = layers.repeat_layer(2, images, layers.conv_2d, 'conv1', 64, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0 )
     # maxpool1
-    # max_pool(3, 3, 2, 2, padding='VALID', name='pool1')
-    maxpool1 = layers.max_pooling(lrn1, 3, 2, padding='VALID')
+    maxpool1 = layers.max_pooling(conv1, 2, 2, padding='VALID')
 
     # conv2
-    conv2 = layers.conv_2d('conv2', maxpool1, 256, 5, 1, padding='SAME', group=2, stddev=0.01, wd=weight_decay, bias=0.1)
-
-    # lrn2
-    # lrn(2, 2e-05, 0.75, name='norm2')
-    radius = 2; alpha = 2e-05; beta = 0.75; bias = 1.0
-    lrn2 = layers.lrn(conv2, radius, alpha, beta, bias)
-
+    conv2 = layers.repeat_layer(2, maxpool1, layers.conv_2d, 'conv2', 128, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0 )
     # maxpool2
-    # max_pool(3, 3, 2, 2, padding='VALID', name='pool2')
-    maxpool2 = layers.max_pooling(lrn2, 3, 2, padding='VALID')
+    maxpool2 = layers.max_pooling(conv2, 2, 2, padding='VALID')
 
     # conv3
-    conv3 = layers.conv_2d('conv3', maxpool2, 384, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0.1)
+    conv3 = layers.repeat_layer(3, maxpool2, layers.conv_2d, 'conv3', 256, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0 )
+    # maxpool3
+    maxpool3 = layers.max_pooling(conv3, 2, 2, padding='VALID')
 
     # conv4
-    conv4 = layers.conv_2d('conv4', conv3, 384, 3, 1, padding='SAME', group=2, stddev=0.01, wd=weight_decay, bias=0.1)
+    conv4 = layers.repeat_layer(3, maxpool3, layers.conv_2d, 'conv4', 512, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0 )
+    # maxpool4
+    maxpool4 = layers.max_pooling(conv4, 2, 2, padding='VALID')
 
     # conv5
-    conv5 = layers.conv_2d('conv5', conv4, 256, 3, 1, padding='SAME', group=2, stddev=0.01, wd=weight_decay, bias=0.1)
-
+    conv5 = layers.repeat_layer(3, maxpool4, layers.conv_2d, 'conv5', 512, 3, 1, padding='SAME', group=1, stddev=0.01, wd=weight_decay, bias=0 )
     # maxpool5
-    # max_pool(3, 3, 2, 2, padding='VALID', name='pool5')
-    maxpool5 = layers.max_pooling(conv5, 3, 2, padding='VALID')
+    maxpool5 = layers.max_pooling(conv5, 2, 2, padding='VALID')
 
-    # Fc6
     # fc(4096, name='fc6')
-    fc6 = layers.fc('fc6', maxpool5, 4096, stddev=0.005, wd=weight_decay, bias=0.1)
+    fc6 = layers.fc('fc6', maxpool5, 4096, stddev=0.01, wd=weight_decay, bias=0.1)
     fc6 = layers.dropout(fc6, keep_prob)
 
     # Fc7
     # fc(4096, name='fc7')
-    fc7 = layers.fc('fc7', fc6, 4096, stddev=0.001, wd=weight_decay, bias=0.1)
+    fc7 = layers.fc('fc7', fc6, 4096, stddev=0.01, wd=weight_decay, bias=0.1)
     fc7 = layers.dropout(fc7, keep_prob)
 
     # softmax, i.e. softmax(WX + b) fc8
     # fc(NUMCLASSES, relu=False, name='fc8')
     softmax_linear = layers.fc('fc8', fc7, FLAGS.num_classes,
-                                    stddev=0.01, wd=weight_decay, bias=0.1, active=False)
+                                stddev=0.01, wd=weight_decay, bias=0.1, active=False)
     return softmax_linear
 
 

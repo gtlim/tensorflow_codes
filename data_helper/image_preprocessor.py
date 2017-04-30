@@ -1,11 +1,11 @@
 import tensorflow as tf
 from sklearn.utils import shuffle
 import numpy as np 
-from scipy import misc
+from datetime import datetime
+
 
 class QueueData(object):
     depth = 3
-    crop_size = 227
     """
     Usages:
        prep = QueueData()
@@ -13,6 +13,9 @@ class QueueData(object):
        img = result.images
        label = result.labels
     """
+    def __init__(self, crop_size=227):
+        self.crop_size = crop_size
+
     def read_labeled_image_list(self, filename):
         """
         Reads a .txt file containing pathes and labeles
@@ -36,7 +39,7 @@ class QueueData(object):
         Consumes a single filename and label as a ' '-delimited string.
 
         Args:
-          input_queue: A tensor .
+          input_queue: Tensor containing filename and label.
         Returns:
           Two tensors: the decoded image, and the string label.
         """
@@ -84,7 +87,7 @@ class QueueData(object):
     
     def distorted_inputs(self, filename, batch_size, image_size):
         """
-        Construct distorted input for CIFAR training using the Reader ops.
+        Construct distorted input for training using the Reader ops.
 
         Args:
           filename: .txt file with image path, label per line..
@@ -102,13 +105,11 @@ class QueueData(object):
 
         image_list, label_list = self.read_labeled_image_list(filename)
         NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = len(image_list)
-        #logger.info("%d NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN", NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN)
-        print("%d NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN", NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN)
+        print(('%s: NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN: %d') %(datetime.now(), NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN))
         images = tf.convert_to_tensor(image_list, dtype=tf.string)
         labels = tf.convert_to_tensor(label_list, dtype=tf.int32)
         # Makes an input queue
         input_queue = tf.train.slice_input_producer([images, labels],
-                                                    #num_epochs=NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN,
                                                     shuffle=True)
 
         image, label = self.read_images_from_disk(input_queue)
@@ -146,8 +147,7 @@ class QueueData(object):
 
         image_list, label_list = self.read_labeled_image_list(filename)
         num_examples = len(image_list)
-        #logger.info("%d num_examples", num_examples)
-        print("%d num_examples", num_examples)
+        print(("%s: NUM_EXAMPLE: %d") %(datetime.now(),num_examples))
         images = tf.convert_to_tensor(image_list, dtype=tf.string)
         labels = tf.convert_to_tensor(label_list, dtype=tf.int32)
 
@@ -166,10 +166,7 @@ class QueueData(object):
         # Crop the central [height, width] of the image.
         resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
                                                                width, height)
-
-        # Subtract off the mean and divide by the variance of the pixels.
-        # float_image = tf.image.per_image_whitening(resized_image)
-
+        resized_image = tf.image.per_image_whitening(resized_image)
 
         # Optional Image and Label Batching
         image_batch, label_batch = tf.train.batch([resized_image, label],

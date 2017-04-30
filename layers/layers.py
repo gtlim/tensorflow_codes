@@ -4,6 +4,12 @@ from common import (
 )
 import tensorflow as tf
 
+def repeat_layer(repetitions, inputs, op, name , *args, **kwargs):
+    tower = inputs
+    for idx in range(repetitions):
+      new_name = name + '_' + str(idx)
+      tower = op(new_name, tower, *args, **kwargs)
+    return tower
 
 def conv(_input, kernel, biases, c_o, s_h, s_w, padding, group):
     """
@@ -114,11 +120,8 @@ def fc(name, x, out_dim, stddev, wd, bias, active=True):
         return  tf.add(tf.matmul(x, weights), biases)
        
 
-def dropout(x,keep_prob,is_training):
-    if is_training:
-        return tf.nn.dropout(x,keep_prob) 
-    else:
-        return x
+def dropout(x,keep_prob):
+    return tf.nn.dropout(x,keep_prob)
 
 
 def bottleneck_unit(name, x, out_channel1, out_channel2, down_stride=False):
